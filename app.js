@@ -51,6 +51,8 @@ function escapeHtml(str = "") {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
-
+async function loadProfile() {
+  // пока пусто, чтобы app.js не падал
+}
 loadProfile();
 loadEmails();
