@@ -88,14 +88,10 @@ export async function onRequestGet(context) {
 
     const headers = msg.payload?.headers || [];
     messages.push({
-      id: msg.id,
-      threadId: msg.threadId,
-      snippet: msg.snippet || "",
-      subject: getHeader(headers, "Subject"),
-      from: getHeader(headers, "From"),
-      date: getHeader(headers, "Date")
-    });
-  }
-
+  subject: headers.find(h => h.name === "Subject")?.value || "",
+  from: headers.find(h => h.name === "From")?.value || "",
+  date: headers.find(h => h.name === "Date")?.value || "",
+  snippet: msg.snippet || ""
+});
   return Response.json({ messages });
 }
