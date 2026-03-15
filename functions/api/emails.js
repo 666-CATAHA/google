@@ -1,5 +1,5 @@
 export async function onRequestGet(context) {
-  const { request, env } = context;
+  const { request } = context;
 
   try {
     const cookie = request.headers.get("Cookie") || "";
