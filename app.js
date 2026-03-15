@@ -25,6 +25,7 @@ async function loadEmails() {
     `).join("");
   } catch (e) {
     el.textContent = "Ошибка загрузки писем";
+    console.error(e);
   }
 }
 
@@ -51,8 +52,5 @@ function escapeHtml(str = "") {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
-async function loadProfile() {
-  // пока пусто, чтобы app.js не падал
-}
-loadProfile();
+
 loadEmails();
