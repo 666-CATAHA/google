@@ -1,55 +1,55 @@
-async function sha256(text) {
-  const data = new TextEncoder().encode(text);
-  const hash = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function parseCookies(cookieHeader) {
+function parseCookies(cookieHeader = "") {
   const out = {};
-  if (!cookieHeader) return out;
   for (const part of cookieHeader.split(";")) {
-    const idx = part.indexOf("=");
-    if (idx === -1) continue;
-    const key = part.slice(0, idx).trim();
-    const val = part.slice(idx + 1).trim();
-    out[key] = val;
+    const i = part.indexOf("=");
+    if (i !== -1) {
+      const key = part.slice(0, i).trim();
+      const val = part.slice(i + 1).trim();
+      out[key] = val;
+    }
   }
   return out;
 }
 
-async function getSession(request, env) {
-  const cookies = parseCookies(request.headers.get("Cookie"));
-  const raw = cookies.session;
+function decodeBase64Unicode(str) {
+  const bin = atob(str);
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
+async function sha256(text) {
+  const data = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function verifySession(raw, secret) {
   if (!raw || !raw.includes(".")) return null;
 
-  const [payloadB64, sig] = raw.split(".");
-  const expected = await sha256(payloadB64 + env.SESSION_SECRET);
-  if (sig !== expected) return null;
+  const [payload, signature] = raw.split(".");
+  const expected = await sha256(payload + secret);
+
+  if (signature !== expected) return null;
 
   try {
-    const json = decodeURIComponent(escape(atob(payloadB64)));
-    return JSON.parse(json);
+    return JSON.parse(decodeBase64Unicode(payload));
   } catch {
     return null;
   }
 }
 
 export async function onRequestGet(context) {
-  const session = await getSession(context.request, context.env);
+  const cookieHeader = context.request.headers.get("Cookie") || "";
+  const cookies = parseCookies(cookieHeader);
+  const session = await verifySession(cookies.session, context.env.SESSION_SECRET);
+
   if (!session) {
-    return Response.json({ authenticated: false }, { status: 401 });
+    return Response.json({ error: "Не авторизован" }, { status: 401 });
   }
 
   return Response.json({
-    authenticated: true,
-    user: {
-      email: session.email,
-      name: session.name,
-      given_name: session.given_name,
-      family_name: session.family_name,
-      picture: session.picture
-    }
+    email: session.email || "",
+    name: session.name || "",
+    picture: session.picture || ""
   });
 }
